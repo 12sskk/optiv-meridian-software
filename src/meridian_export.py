@@ -101,7 +101,8 @@ def build_meridian_updates(
         vendor_sources = sources_by_name.get(vendor.name, [])
         source_urls = {item.url for item in vendor_sources}
         vendor_evidence = [item for url in source_urls for item in evidence_by_url.get(url, [])]
-        ai_evidence = [item for item in vendor_evidence if item.category == "ai_capability_claim"]
+        ai_evidence = [item for item in vendor_evidence if item.category in {"ai_capability_claim", "ai_subprocessor_disclosure"}]
+        provider_evidence = [item for item in vendor_evidence if item.category == "ai_subprocessor_disclosure"]
         fetched_count = len({url for url in fetched_urls if url in source_urls})
 
         output: dict[str, Any] = {}
@@ -142,10 +143,22 @@ def build_meridian_updates(
             prefix = "No retrieved excerpts are available. The following are source candidates, not verified evidence:"
             put("evidence_description", prefix + ("\n" + candidate_urls if candidate_urls else " No source candidates were generated."))
 
-        # No provider-name extraction is implemented yet; do not infer names.
-        put("providers", "No AI sub-processor/model provider has been verified from the current extracted evidence. This is not evidence that none are used.")
+        if provider_evidence:
+            provider_lines = []
+            for item in provider_evidence[:5]:
+                named_terms = [term for term in item.matched_terms if term.lower() not in {
+                    "subprocessor", "third-party provider", "ai provider", "model provider",
+                    "process data using", "powered by", "provided by", "hosted by", "api"
+                }]
+                provider_lines.append(
+                    f"Possible named provider(s): {', '.join(named_terms) or 'review excerpt'}; "
+                    f"excerpt: {item.snippet} [Source: {item.source_url}]"
+                )
+            put("providers", "Potential disclosure leads — verify manually; not proof of processing Meridian data:\n" + "\n".join(provider_lines))
+        else:
+            put("providers", "No named AI sub-processor/model provider was detected in the reviewed excerpts. This is not evidence that none are used.")
 
-        if not ai_evidence:
+        if not any(item.category == "ai_capability_claim" for item in vendor_evidence):
             put("risk_classification", "Not rated — AI usage has not been established by current evidence.")
             put("risk_rationale", "The current keyword screening did not establish AI usage in the relevant vendor service. Do not infer low risk or absence of AI. " + ("Other public-page keywords may be present but are not sufficient to assign an AI-specific risk rating."))
             put("action", "Fetch and review product/service documentation, privacy and trust pages, and sub-processor disclosures. Verify whether the documented AI capability applies to the service Meridian uses before assigning an AI security risk rating.")

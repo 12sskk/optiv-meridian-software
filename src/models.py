@@ -48,6 +48,7 @@ class ExtractedDocument:
     title: str | None = None
     text: str = ""
     error: str | None = None
+    retrieved_at: str | None = None
 
 
 @dataclass
@@ -59,6 +60,9 @@ class EvidenceItem:
     heuristic_score: float
     rationale: str
     source_url: str = ""
+    source_title: str = ""
+    retrieved_at: str | None = None
+    matched_terms: list[str] = field(default_factory=list)
 
 
 @dataclass

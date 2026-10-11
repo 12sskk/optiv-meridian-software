@@ -38,3 +38,25 @@ def test_visible_text_strips_scripts() -> None:
     assert title == "Trust"
     assert "secret" not in text
     assert "Privacy policy" in text
+
+
+def test_evidence_keeps_exact_sentence_and_source_metadata() -> None:
+    sentence = "Our AI assistant is powered by OpenAI via API."
+    items = classify_text(
+        "A general introduction. " + sentence + " More unrelated text.",
+        source_url="https://example.invalid/trust",
+        source_title="Trust Center",
+        retrieved_at="2026-10-11T12:00:00+00:00",
+    )
+    ai_item = next(item for item in items if item.category == "ai_capability_claim")
+    assert ai_item.snippet == sentence
+    assert ai_item.source_title == "Trust Center"
+    assert ai_item.retrieved_at == "2026-10-11T12:00:00+00:00"
+    provider_item = next(item for item in items if item.category == "ai_subprocessor_disclosure")
+    assert "OpenAI" in provider_item.matched_terms
+    assert provider_item.source_url == "https://example.invalid/trust"
+
+
+def test_provider_name_alone_does_not_trigger_subprocessor_category() -> None:
+    items = classify_text("Our staff attended an OpenAI conference.")
+    assert all(item.category != "ai_subprocessor_disclosure" for item in items)

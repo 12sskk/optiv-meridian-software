@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import re
+from datetime import datetime, timezone
 from typing import Iterable
 
 import requests
@@ -91,8 +92,11 @@ def extract_url(url: str, *, timeout: int = DEFAULT_TIMEOUT) -> ExtractedDocumen
             error="No visible text was extracted.",
         )
 
+    retrieved_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
     logger.info("Extracted %s characters from %s", len(text), url)
-    return ExtractedDocument(url=url, status="ok", title=title, text=text)
+    return ExtractedDocument(
+        url=url, status="ok", title=title, text=text, retrieved_at=retrieved_at
+    )
 
 
 def extract_candidates(

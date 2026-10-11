@@ -60,6 +60,9 @@ CREATE TABLE IF NOT EXISTS evidence (
     heuristic_score REAL NOT NULL,
     rationale TEXT NOT NULL,
     source_url TEXT,
+    source_title TEXT NOT NULL DEFAULT '',
+    retrieved_at TEXT,
+    matched_terms_json TEXT NOT NULL DEFAULT '[]',
     created_at TEXT NOT NULL,
     FOREIGN KEY (vendor_id) REFERENCES vendors(id)
 );
@@ -83,6 +86,17 @@ def connect(path: str | Path) -> sqlite3.Connection:
         connection.row_factory = sqlite3.Row
         connection.execute("PRAGMA foreign_keys = ON")
         connection.executescript(SCHEMA)
+        # Additive migration for databases created by earlier project versions.
+        existing_columns = {
+            row[1] for row in connection.execute("PRAGMA table_info(evidence)").fetchall()
+        }
+        for column, declaration in (
+            ("source_title", "TEXT NOT NULL DEFAULT ''"),
+            ("retrieved_at", "TEXT"),
+            ("matched_terms_json", "TEXT NOT NULL DEFAULT '[]'"),
+        ):
+            if column not in existing_columns:
+                connection.execute(f"ALTER TABLE evidence ADD COLUMN {column} {declaration}")
         connection.commit()
     except sqlite3.Error as exc:
         raise DatabaseError(f"Could not open database at {db_path}: {exc}") from exc
@@ -178,8 +192,9 @@ def save_evidence(
         connection.executemany(
             """
             INSERT INTO evidence (
-                vendor_id, category, snippet, heuristic_score, rationale, source_url, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                vendor_id, category, snippet, heuristic_score, rationale, source_url,
+                source_title, retrieved_at, matched_terms_json, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             [
                 (
@@ -189,6 +204,9 @@ def save_evidence(
                     item.heuristic_score,
                     item.rationale,
                     item.source_url,
+                    item.source_title,
+                    item.retrieved_at,
+                    json.dumps(item.matched_terms),
                     _now(),
                 )
                 for item in evidence

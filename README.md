@@ -5,10 +5,11 @@ Local Streamlit tool for reviewing vendor AI usage signals and related security 
 ## Important assessment limits
 
 - Source discovery creates **source candidates**, not findings.
-- Keyword matches are **heuristic leads**, not proof of AI use, a security control, a breach, or a compliance failure.
+- Keyword matches are **heuristic leads**, not proof of AI use, a security control, a breach, or a compliance failure. Evidence rows retain the exact matched sentence, source URL/title, retrieval timestamp when fetched, and matched terms.
 - If no AI-related evidence is found, the tool does not infer that the vendor does not use AI.
 - Criticality scoring for the Meridian workbook is a proposed transparent heuristic, not an official Optiv scoring formula. Its rationale and missing-input notes should be reviewed.
-- AI-specific risk is left unrated unless an AI capability signal is present in the extracted evidence; even then, the result is a draft requiring human review.
+- AI-specific risk is left unrated unless an AI capability signal is present in the extracted evidence; unrelated privacy/security keywords or a provider-name lead alone do not trigger an AI risk score. Any score remains a draft requiring human review.
+- Named AI-provider/subprocessor screening requires a provider name and an explicit relationship/processing cue in the same sentence. This is still a review lead, not proof that the provider processes Meridian data.
 - Meridian export updates only student-completion cells in a copy of the original workbook. The supplied vendor rows and other sheets are preserved.
 
 ## Setup

@@ -28,8 +28,14 @@ def analyse_risk(
         "Public-web heuristics are incomplete and can miss or overstate AI usage.",
         "Keyword matches are not confirmation of product behaviour or control effectiveness.",
     ]
-    if not evidence:
-        logger.info("Insufficient evidence for %s", vendor_name)
+    ai_claims = [item for item in evidence if item.category == "ai_capability_claim"]
+    if not evidence or not ai_claims:
+        logger.info("AI-specific risk not rated for %s: no AI capability claim", vendor_name)
+        reason = (
+            "No classified public-text evidence was available for this vendor."
+            if not evidence
+            else "Other keywords or a provider disclosure may be present, but no AI capability claim was identified."
+        )
         return RiskResult(
             vendor_name=vendor_name,
             criticality_score=None if criticality is None else criticality.score,
@@ -37,8 +43,7 @@ def analyse_risk(
             risk_level="not_rated",
             status="insufficient_evidence",
             drivers=[],
-            caveats=caveats
-            + ["No classified public-text evidence was available for this vendor."],
+            caveats=caveats + [reason, "Not rated does not mean low risk or no AI usage."],
         )
 
     criticality_score = 50.0 if criticality is None else criticality.score

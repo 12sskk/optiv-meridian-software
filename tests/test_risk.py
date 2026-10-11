@@ -33,3 +33,17 @@ def test_evidence_produces_draft_not_audit_opinion() -> None:
     assert result.status == "heuristic_draft"
     assert result.risk_score is not None
     assert any("not an audit opinion" in caveat.lower() for caveat in result.caveats)
+
+
+def test_non_ai_evidence_does_not_receive_ai_specific_risk_rating() -> None:
+    from src.models import EvidenceItem
+    result = analyse_risk(
+        vendor_name="Example", criticality=None,
+        evidence=[EvidenceItem(
+            category="ai_subprocessor_disclosure", snippet="Powered by OpenAI.",
+            heuristic_score=0.65, rationale="Possible disclosure",
+        )],
+    )
+    assert result.risk_score is None
+    assert result.risk_level == "not_rated"
+    assert result.status == "insufficient_evidence"
