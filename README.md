@@ -70,3 +70,20 @@ The test suite covers the pipeline modules, the Meridian workbook parser, critic
 - `src/db.py` — SQLite persistence
 - `src/export.py` — generic multi-sheet export
 - `tests/` — unit and integration tests
+
+
+## Important: the fictional example row
+
+The supplied `Meridian_Vendor_Input.xlsx` intentionally contains a completed fictional worked example
+(`V-000`, Larkspur Servicing Group Ltd) in the `Vendor Inventory` sheet. Those cells are part of the
+original template and must remain exactly as supplied. Do not clear them or treat them as a real vendor.
+The loader excludes this row from scoring, and the template-aware exporter writes assessment updates only
+for the six real vendor IDs (`V-001` through `V-006`). The export test compares the example row against
+the original workbook to ensure it remains unchanged.
+
+## Evidence interpretation
+
+Generated URLs are source candidates, not findings. Fetched-page keyword matches are leads for human review,
+not proof that the specific Meridian service uses AI or that a named provider processes Meridian data.
+Generic privacy, security, and third-party-sharing terms provide context only; they do not independently
+establish AI usage. Keep AI usage unknown and AI-specific risk not rated when relevant evidence is insufficient.

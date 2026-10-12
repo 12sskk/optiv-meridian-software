@@ -1,10 +1,3 @@
-"""Load and update the Meridian vendor inventory workbook in place.
-
-Pandas is used to process tabular sheets. OpenPyXL is used to locate the
-inventory header, inspect protection/formatting, and write student cells
-back onto a copy of the original workbook (never a reconstructed file).
-"""
-
 from __future__ import annotations
 
 import io

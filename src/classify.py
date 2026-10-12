@@ -1,9 +1,3 @@
-"""Heuristic evidence classification with traceable source excerpts.
-
-Matches are review leads only. They do not prove a vendor's deployed product
-configuration, use of AI in Meridian's service, or a security/compliance failure.
-"""
-
 from __future__ import annotations
 
 import logging
@@ -47,9 +41,6 @@ CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
     ),
 }
 
-# These are provider names, not findings by themselves. A disclosure category is
-# emitted only when a provider name and an explicit AI/vendor-processing cue occur
-# in the same sentence. This intentionally favours precision over recall.
 AI_PROVIDER_PATTERNS: tuple[str, ...] = (
     r"\bOpenAI\b", r"\bAnthropic\b", r"\bAzure OpenAI\b",
     r"\bGoogle Vertex AI\b", r"\bAmazon Bedrock\b",
@@ -70,7 +61,6 @@ def _sentences(text: str) -> list[str]:
     normalized = re.sub(r"\s+", " ", text).strip()
     if not normalized:
         return []
-    # Keep punctuation and avoid treating common web abbreviations as boundaries.
     parts = re.split(r"(?<=[.!?])\s+(?=[A-Z0-9\"'])", normalized)
     return [part.strip() for part in parts if part.strip()]
 
@@ -85,12 +75,11 @@ def _matching_terms(patterns: Iterable[str], text: str) -> list[str]:
                 terms.append(term)
     return terms
 
-
+#classifies pieces of text which could possibly be evidence and assigns score
 def classify_text(
     text: str, *, source_url: str = "", source_title: str = "",
     retrieved_at: str | None = None,
 ) -> list[EvidenceItem]:
-    """Classify text into traceable evidence leads using exact sentence excerpts."""
     if not text or not text.strip():
         return []
 
@@ -107,7 +96,6 @@ def classify_text(
         if not matched:
             continue
         excerpt, terms = matched[0]
-        # Score is a reproducible keyword-strength indicator, not probability.
         score = min(0.85, 0.35 + 0.10 * len(terms) + 0.05 * (len(matched) - 1))
         items.append(EvidenceItem(
             category=category, snippet=excerpt[:700],
@@ -121,7 +109,7 @@ def classify_text(
             retrieved_at=retrieved_at, matched_terms=terms,
         ))
 
-    # Separate, stricter signal for named AI/model providers or subprocessors.
+#stricter rules for AI related matches
     for sentence in sentences:
         providers = _matching_terms(AI_PROVIDER_PATTERNS, sentence)
         cues = _matching_terms(AI_PROCESSING_CUES, sentence)
@@ -144,7 +132,6 @@ def classify_text(
 
 
 def classify_documents(documents: list[ExtractedDocument]) -> list[EvidenceItem]:
-    """Classify successfully extracted documents and retain source metadata."""
     evidence: list[EvidenceItem] = []
     for document in documents:
         if document.status != "ok" or not document.text:
