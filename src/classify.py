@@ -14,6 +14,8 @@ CATEGORY_PATTERNS: dict[str, tuple[str, ...]] = {
         r"\blarge language model(?:s)?\b", r"\bllm(?:s)?\b",
         r"\bartificial intelligence\b", r"\bAI[- ]powered\b",
         r"\bAI assistant\b", r"\bAI feature(?:s)?\b",
+        r"\bAI agent(?:s)?\b", r"\bfrontier AI\b",
+        r"\bfoundation model(?:s)?\b", r"\bdeep learning\b",
     ),
     "data_processing": (
         r"\bpersonal data\b", r"\bcustomer data\b",

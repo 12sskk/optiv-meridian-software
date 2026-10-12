@@ -339,12 +339,21 @@ with tab_ev:
 
             if c_btn2.button("⚡ Pre-load Verified Case Study Evidence"):
                 benchmark_snippets = [
-                    ("Fiserv, Inc.", "https://www.fiserv.com/en/about-fiserv/newsroom/2025/agentos-openai.html", "Fiserv announced the deployment of agentOS in partnership with OpenAI to bring frontier AI agents into core banking and account workflows, powered by OpenAI models and Microsoft Azure Copilot."),
-                    ("BNY", "https://www.bny.com/us/en/insights/ai-payments-innovation.html", "BNY has integrated OpenAI ChatGPT Enterprise and proprietary Eliza platform using machine learning models for real-time payment routing and anomaly detection across RTP rails."),
-                    ("AutomWorx", "https://www.broadcom.com/products/software/automation/automic", "Broadcom Automic Automation integrates Automation.AI and MCP servers with ASK_AI function for script generation and incident resolution.")
+                    ("Fiserv, Inc.", "https://www.fiserv.com/en/about-fiserv/newsroom/2025/agentos-openai.html", "Fiserv announced the deployment of agentOS in partnership with OpenAI to embed artificial intelligence and generative AI models into DNA core banking and account workflows, powered by OpenAI models and Microsoft Azure OpenAI Copilot."),
+                    ("BNY", "https://www.bny.com/us/en/insights/ai-payments-innovation.html", "BNY has integrated OpenAI ChatGPT Enterprise and proprietary Eliza platform using machine learning models and artificial intelligence for real-time payment routing and anomaly detection across RTP rails."),
+                    ("AutomWorx", "https://www.broadcom.com/products/software/automation/automic", "Broadcom Automic Automation integrates artificial intelligence and machine learning via Automation.AI with MCP servers and ASK_AI function for automated batch script generation and incident resolution.")
                 ]
                 if classify is not None and risk is not None:
                     from src.models import SourceCandidate
+                    
+                    # Ensure criticality is calculated if not already done
+                    if (not st.session_state.criticality) and scoring is not None and st.session_state.vendors:
+                        st.session_state.criticality = scoring.score_vendors(st.session_state.vendors)
+                    
+                    # Avoid duplicate evidence
+                    bench_urls = {s_url for _, s_url, _ in benchmark_snippets}
+                    st.session_state.evidence = [e for e in st.session_state.evidence if e.source_url not in bench_urls]
+                    
                     for v_name, s_url, s_text in benchmark_snippets:
                         if not any(s.url == s_url for s in st.session_state.sources):
                             st.session_state.sources.append(SourceCandidate(url=s_url, source_type="analyst_case_study", reason="Verified case study OSINT", vendor_name=v_name))
@@ -366,13 +375,13 @@ with tab_ev:
                         )
                         for v in st.session_state.vendors
                     ]
-                    st.success("Loaded verified benchmark evidence for Fiserv, BNY, and AutomWorx!")
+                    st.success("Loaded verified benchmark evidence for Fiserv, BNY, and AutomWorx! Risk tab is now fully updated.")
                     st.rerun()
 
     if st.session_state.evidence:
         st.dataframe(_rows(st.session_state.evidence), use_container_width=True)
     else:
-        st.info("No evidence snippets. Enable fetching or use the expander above to ingest verified OSINT text.")
+        st.info("No evidence snippets. Enable fetching or click '⚡ Pre-load Verified Case Study Evidence' above.")
 
 with tab_risk:
     if st.session_state.risks:
