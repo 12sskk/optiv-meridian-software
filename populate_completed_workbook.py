@@ -119,14 +119,13 @@ fill_cream = PatternFill(start_color="FFF2CC", end_color="FFF2CC", fill_type="so
 font_content = Font(name="Calibri", size=10)
 align_content = Alignment(vertical="top", wrap_text=True)
 
+# Build exact normalized lookup for resilience
+header_lookup_norm = {k.strip().lower(): v for k, v in header_col_map.items()}
+
 for row_idx, fields in VENDOR_DATA.items():
     for field_name, value in fields.items():
-        # Match field_name to header
-        target_col = None
-        for h, c in header_col_map.items():
-            if field_name.lower() in h.lower() or h.lower() in field_name.lower():
-                target_col = c
-                break
+        # Exact header match first, then normalized exact match
+        target_col = header_col_map.get(field_name) or header_lookup_norm.get(field_name.strip().lower())
         if target_col:
             cell = ws.cell(row=row_idx, column=target_col, value=value)
             cell.font = font_content

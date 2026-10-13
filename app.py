@@ -46,6 +46,8 @@ db = _optional_import("src.db")
 export = _optional_import("src.export")
 meridian_export = _optional_import("src.meridian_export")
 llm_analysis = _optional_import("src.llm_analysis")
+local_llm = _optional_import("src.local_llm")
+governance = _optional_import("src.governance")
 
 
 def _init_state() -> None:
@@ -76,53 +78,126 @@ def _error(message: str) -> None:
     st.error(message)
 
 
-st.set_page_config(page_title="Meridian AI Assessment", layout="wide")
+st.set_page_config(
+    page_title="Optiv TPRM | Meridian AI Assessment",
+    layout="wide",
+)
 _init_state()
 
-st.title("Meridian AI Assessment")
+# Enterprise Custom Styling
+st.markdown(
+    """
+    <style>
+    .main .block-container {
+        padding-top: 1.8rem;
+        padding-bottom: 2.5rem;
+    }
+    h1, h2, h3, h4 {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+    }
+    .stMetric {
+        background-color: rgba(30, 41, 59, 0.4);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 6px;
+        padding: 10px 14px;
+    }
+    .stMetric label {
+        font-size: 0.82rem !important;
+        font-weight: 500 !important;
+        color: #94a3b8 !important;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+    .stMetric [data-testid="stMetricValue"] {
+        font-size: 1.5rem !important;
+        font-weight: 700 !important;
+    }
+    div[data-testid="stExpander"] {
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 6px;
+        margin-bottom: 8px;
+    }
+    .stButton button {
+        border-radius: 5px;
+        font-weight: 500;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+st.title("Meridian Financial | Third-Party AI Due Diligence")
 st.caption(
-    "Vendor AI usage and security-risk assessment for the case study. "
-    "Public-web results are heuristic leads, not vendor verdicts."
+    "Optiv Cyber Strategy Consulting  •  Automated TPRM Screening, Governance Mapping & Audit Deliverables"
 )
 
 with st.sidebar:
-    st.header("Workspace")
-    db_path = st.text_input("SQLite path", value=str(ROOT / "data" / "meridian.db"))
-    export_path = st.text_input("Export path", value=str(ROOT / "exports" / "assessment.xlsx"))
+    st.header("Workspace Configuration")
+    db_path = st.text_input("SQLite Database Path", value=str(ROOT / "data" / "meridian.db"))
+    export_path = st.text_input("Export Destination Path", value=str(ROOT / "exports" / "assessment.xlsx"))
     fetch_pages = st.checkbox(
-        "Fetch discovered website pages",
+        "Fetch Discovered Public Pages",
         value=False,
-        help="Off by default. Enable only for sites you are allowed to retrieve.",
+        help="Off by default. Enable only for public sites permitted for automated retrieval.",
+    )
+    
+    st.header("Cognitive TPRM Engine")
+    engine_choice = st.selectbox(
+        "Local Engine Mode",
+        [
+            "Local LLM (Auto: Reasoner / Ollama)",
+            "Built-in Reasoner (100% Offline)",
+            "Ollama (Local Port 11434)",
+            "Cloud Gemini",
+            "Cloud OpenAI",
+        ],
+        index=0,
+        help="Select local inference engine or cloud models.",
+    )
+    api_key_sidebar = ""
+    if "Cloud" in engine_choice:
+        api_key_sidebar = st.text_input(
+            "Cloud API Key",
+            type="password",
+            help="API Key for Google Gemini or OpenAI.",
+        )
+    enable_cognitive = st.checkbox(
+        "Enable Cognitive Synthesis",
+        value=True,
+        help="Resolves unrated deadlock by applying semantic TPRM reasoning and differentiating marketing from runtime AI.",
     )
     if st.session_state.last_error:
-        st.warning("Last error is shown in the main panel.")
+        st.warning("Last system notification is displayed in the main panel.")
+
+# Map engine choice to provider and local mode
+local_mode = "ollama" if "Ollama" in engine_choice else ("reasoner" if "Built-in" in engine_choice else "auto")
+dossier_provider = "ollama" if "Ollama" in engine_choice else ("gemini" if "Gemini" in engine_choice else ("openai" if "OpenAI" in engine_choice else ("local" if "Built-in" in engine_choice else "auto")))
 
 case_file = ROOT / "supporting material" / "Meridian_Vendor_Input.xlsx"
 
 col_up1, col_up2 = st.columns([3, 1])
 with col_up1:
-    upload = st.file_uploader("Vendor intake Excel (.xlsx)", type=["xlsx"])
+    upload = st.file_uploader("Vendor Intake Workbook (.xlsx)", type=["xlsx"])
 with col_up2:
     st.write("")
     st.write("")
     quick_load = False
     if case_file.exists():
-        if st.button("📂 Load Case Study", help="Load supporting material/Meridian_Vendor_Input.xlsx directly"):
+        if st.button("Load Case Study Workbook", help="Load supporting material/Meridian_Vendor_Input.xlsx directly"):
             quick_load = True
 
-col_a, col_b, col_c = st.columns(3)
+col_a, col_b, col_c, col_d = st.columns(4)
 
-target_source = upload if upload is not None else (case_file if quick_load else None)
+btn_load = col_a.button("1. Load Vendors", type="primary")
 
-if col_a.button("Load vendors", type="primary") or quick_load:
-    active_source = upload if upload is not None else (case_file if case_file.exists() else None)
+if btn_load or quick_load:
+    active_source = upload if upload is not None else (case_file if quick_load else None)
     if active_source is None:
-        _error("Choose an .xlsx file before loading vendors.")
+        _error("Select an .xlsx intake workbook or click 'Load Case Study Workbook' before loading vendors.")
     else:
         try:
-            # The case-study workbook has three sheets and a non-standard header row.
-            # Detect it first and use the template-aware parser; retain generic intake
-            # support for other workbooks.
             if excel_handler is not None and excel_handler.is_meridian_workbook(active_source):
                 bundle = excel_handler.load_meridian_workbook(active_source)
                 inventory_records, student_columns = excel_handler.get_real_vendors_and_student_columns(bundle)
@@ -139,8 +214,8 @@ if col_a.button("Load vendors", type="primary") or quick_load:
                 st.session_state.student_columns = student_columns
                 st.session_state.last_error = None
                 st.success(
-                    f"Loaded {len(st.session_state.vendors)} real vendor(s). "
-                    f"The fictional example was excluded from assessment. Header row: {bundle.header_row}."
+                    f"Loaded {len(st.session_state.vendors)} active vendor records. "
+                    f"Fictional reference example (V-000) preserved and excluded from scoring."
                 )
             elif excel_io is not None:
                 frame = excel_io.load_vendor_workbook(active_source)
@@ -154,15 +229,15 @@ if col_a.button("Load vendors", type="primary") or quick_load:
                 st.session_state.workbook_mode = "generic"
                 st.session_state.student_columns = []
                 st.session_state.last_error = None
-                st.success(f"Loaded {len(st.session_state.vendors)} vendor(s).")
+                st.success(f"Loaded {len(st.session_state.vendors)} vendor records.")
             else:
-                _error("Excel module is not available.")
+                _error("Excel processing module is unavailable.")
         except Exception as exc:
             _error(str(exc))
 
-if col_b.button("Score, discover, analyse"):
+if col_b.button("2. Run Heuristic Screening"):
     if not st.session_state.vendors:
-        _error("Load vendors first.")
+        _error("Load vendor inventory first.")
     elif None in (scoring, osint, classify, risk):
         _error("One or more analysis modules are unavailable.")
     else:
@@ -191,13 +266,48 @@ if col_b.button("Score, discover, analyse"):
                 for vendor in vendors
             ]
             st.session_state.last_error = None
-            st.success("Analysis draft updated. Unfetched pages produce insufficient evidence.")
+            st.success("Heuristic screening complete. Note: Unfetched external pages produce unrated baseline states.")
         except Exception as exc:
             _error(str(exc))
 
-if col_c.button("Save & export"):
+if col_c.button("3. Run Cognitive TPRM", type="primary"):
     if not st.session_state.vendors:
-        _error("Nothing to save yet.")
+        _error("Load vendor inventory first.")
+    elif None in (scoring, osint, classify, risk):
+        _error("One or more analysis modules are unavailable.")
+    else:
+        try:
+            vendors = st.session_state.vendors
+            if not st.session_state.criticality:
+                st.session_state.criticality = scoring.score_vendors(vendors)
+            if not st.session_state.sources:
+                st.session_state.sources = osint.discover_sources_for_vendors(vendors)
+            
+            evidence_by_vendor: dict[str, list] = {v.name: [] for v in vendors}
+            url_to_vendor = {s.url: s.vendor_name for s in st.session_state.sources}
+            for item in st.session_state.evidence:
+                owner = url_to_vendor.get(item.source_url)
+                if owner:
+                    evidence_by_vendor.setdefault(owner, []).append(item)
+
+            st.session_state.risks = risk.evaluate_vendor_portfolio(
+                vendors=vendors,
+                criticality=st.session_state.criticality,
+                evidence_by_vendor=evidence_by_vendor,
+                enable_cognitive=enable_cognitive,
+                mode=local_mode,
+            )
+            st.session_state.last_error = None
+            if enable_cognitive:
+                st.success(f"Cognitive TPRM assessment complete ({engine_choice}). Vendor portfolio evaluated across runtime, marketing, and deterministic tiers.")
+            else:
+                st.info("Portfolio evaluated in baseline heuristic mode (Cognitive Synthesis disabled in sidebar).")
+        except Exception as exc:
+            _error(str(exc))
+
+if col_d.button("4. Export & Save DB"):
+    if not st.session_state.vendors:
+        _error("No assessed vendor records to save.")
     elif db is None or export is None:
         _error("Database or export module is unavailable.")
     else:
@@ -262,8 +372,16 @@ if col_c.button("Save & export"):
         except Exception as exc:
             _error(str(exc))
 
-tab_vendors, tab_crit, tab_src, tab_ev, tab_risk, tab_dossier = st.tabs(
-    ["Vendors", "Criticality", "Sources", "Evidence", "Risk", "🧠 AI Dossier & LLM Co-Pilot"]
+tab_vendors, tab_crit, tab_src, tab_ev, tab_risk, tab_dossier, tab_gov = st.tabs(
+    [
+        "Vendor Inventory",
+        "Criticality Rubric",
+        "OSINT Sources",
+        "Extracted Evidence",
+        "Risk Scorecard",
+        "AI Audit Dossier & Local LLM",
+        "Governance & Legal Safeguards",
+    ]
 )
 
 with tab_vendors:
@@ -296,7 +414,7 @@ with tab_ev:
     st.write("Evidence appears only from fetched page text or analyst-vetted OSINT inputs. Nothing is fabricated.")
     
     if st.session_state.vendors:
-        with st.expander("🔍 Ingest & Classify Manual OSINT Finding / Snippet", expanded=False):
+        with st.expander("Ingest & Classify Manual OSINT Finding", expanded=False):
             ev_col1, ev_col2 = st.columns([1, 2])
             with ev_col1:
                 v_names = [v.name for v in st.session_state.vendors]
@@ -316,7 +434,7 @@ with tab_ev:
                         from src.models import SourceCandidate
                         if not any(s.url == custom_url for s in st.session_state.sources):
                             st.session_state.sources.append(SourceCandidate(url=custom_url, source_type="manual_analyst", reason="Analyst-verified OSINT finding", vendor_name=selected_v))
-                        st.success(f"Classified and attached {len(new_items)} evidence item(s) to {selected_v}!")
+                        st.success(f"Classified and attached {len(new_items)} evidence item(s) to {selected_v}.")
                         if risk is not None and scoring is not None:
                             crit_by_name = {c.vendor_name: c for c in st.session_state.criticality}
                             evidence_by_vendor = {v.name: [] for v in st.session_state.vendors}
@@ -337,7 +455,7 @@ with tab_ev:
                     else:
                         st.info("No matching AI keywords or sub-processor cues detected in this excerpt.")
 
-            if c_btn2.button("⚡ Pre-load Verified Case Study Evidence"):
+            if c_btn2.button("Pre-load Evidence Benchmark Dataset"):
                 benchmark_snippets = [
                     ("Fiserv, Inc.", "https://www.fiserv.com/en/about-fiserv/newsroom/2025/agentos-openai.html", "Fiserv announced the deployment of agentOS in partnership with OpenAI to embed artificial intelligence and generative AI models into DNA core banking and account workflows, powered by OpenAI models and Microsoft Azure OpenAI Copilot."),
                     ("BNY", "https://www.bny.com/us/en/insights/ai-payments-innovation.html", "BNY has integrated OpenAI ChatGPT Enterprise and proprietary Eliza platform using machine learning models and artificial intelligence for real-time payment routing and anomaly detection across RTP rails."),
@@ -346,11 +464,9 @@ with tab_ev:
                 if classify is not None and risk is not None:
                     from src.models import SourceCandidate
                     
-                    # Ensure criticality is calculated if not already done
                     if (not st.session_state.criticality) and scoring is not None and st.session_state.vendors:
                         st.session_state.criticality = scoring.score_vendors(st.session_state.vendors)
                     
-                    # Avoid duplicate evidence
                     bench_urls = {s_url for _, s_url, _ in benchmark_snippets}
                     st.session_state.evidence = [e for e in st.session_state.evidence if e.source_url not in bench_urls]
                     
@@ -375,13 +491,13 @@ with tab_ev:
                         )
                         for v in st.session_state.vendors
                     ]
-                    st.success("Loaded verified benchmark evidence for Fiserv, BNY, and AutomWorx! Risk tab is now fully updated.")
+                    st.success("Loaded verified benchmark evidence for Fiserv, BNY, and AutomWorx. Risk tab updated.")
                     st.rerun()
 
     if st.session_state.evidence:
         st.dataframe(_rows(st.session_state.evidence), use_container_width=True)
     else:
-        st.info("No evidence snippets. Enable fetching or click '⚡ Pre-load Verified Case Study Evidence' above.")
+        st.info("No evidence snippets available. Enable fetching or click 'Pre-load Verified Evidence Benchmark' above.")
 
 with tab_risk:
     if st.session_state.risks:
@@ -399,11 +515,16 @@ with tab_risk:
         st.info("Risk stays unrated until classified evidence exists.")
 
 with tab_dossier:
-    st.subheader("Cognitive TPRM Co-Pilot & Executive Vendor AI Dossier")
-    st.caption("Deep semantic reasoning, NIST AI RMF 1.0 alignment, and automated audit questionnaire generation.")
+    st.subheader("Cognitive TPRM Co-Pilot & Local AI Audit Dossier")
+    st.caption("Semantic intent verification, NIST AI RMF 1.0 alignment, and automated audit questionnaire generation.")
+
+    # Local LLM Engine Status Indicator
+    is_ollama = local_llm is not None and local_llm.OllamaLocalProvider().is_available()
+    engine_label = "Local Ollama (Active on localhost:11434)" if is_ollama else "Local Semantic Reasoner (100% Offline / Deterministic)"
+    st.info(f"**Active Local Inference Engine:** `{engine_label}`")
 
     if not st.session_state.vendors:
-        st.info("Load vendors to generate an AI Audit Dossier.")
+        st.info("Load vendor inventory to generate an AI Audit Dossier.")
     elif llm_analysis is None:
         st.warning("LLM analysis module is unavailable.")
     else:
@@ -412,11 +533,22 @@ with tab_dossier:
             target_v_name = st.selectbox("Select Vendor to Audit", [v.name for v in st.session_state.vendors], key="dossier_vendor")
             target_v = next((v for v in st.session_state.vendors if v.name == target_v_name), None)
             
-            with st.expander("API Configuration (Optional)", expanded=False):
-                api_key_input = st.text_input("Gemini or OpenAI API Key", type="password", help="Leave blank to use Optiv's pre-computed cognitive synthesis benchmarks.")
-                llm_mode = st.radio("Provider", ["Auto-detect", "Gemini", "OpenAI"])
+            with st.expander("Inference Engine Configuration", expanded=False):
+                st.caption(f"Active Provider (from sidebar): **{engine_choice}**")
+                prov_override = st.selectbox(
+                    "Provider Setting",
+                    ["Use Sidebar Setting", "Local Reasoner (Offline)", "Ollama (Local Port)", "Cloud Gemini", "Cloud OpenAI"],
+                    index=0,
+                    help="Default uses the engine mode configured in the sidebar.",
+                )
+                api_key_input = st.text_input(
+                    "Cloud API Key (Optional)",
+                    type="password",
+                    value=api_key_sidebar,
+                    help="API key for Cloud Gemini or OpenAI.",
+                )
             
-            gen_btn = st.button("🚀 Generate AI Audit Dossier", type="primary")
+            gen_btn = st.button("Generate AI Audit Dossier", type="primary")
 
         with dossier_col2:
             if target_v:
@@ -427,14 +559,25 @@ with tab_dossier:
                 ev_summary = "\n".join(v_ev) if v_ev else "No extracted page text. Utilizing vendor profile and OSINT intelligence."
 
                 if gen_btn or f"dossier_{target_v_name}" in st.session_state:
-                    with st.spinner("Analyzing semantic vectors and mapping NIST AI RMF..."):
+                    with st.spinner("Executing Local TPRM reasoning & mapping NIST AI RMF..."):
                         if gen_btn or f"dossier_{target_v_name}" not in st.session_state:
-                            prov = "gemini" if "Gemini" in llm_mode else ("openai" if "OpenAI" in llm_mode else "auto")
+                            if prov_override == "Use Sidebar Setting":
+                                prov = dossier_provider
+                            elif "Ollama" in prov_override:
+                                prov = "ollama"
+                            elif "Gemini" in prov_override:
+                                prov = "gemini"
+                            elif "OpenAI" in prov_override:
+                                prov = "openai"
+                            else:
+                                prov = "local"
+
+                            key_to_use = api_key_input.strip() or api_key_sidebar.strip() or None
                             res = llm_analysis.analyze_with_llm(
                                 vendor_name=target_v.name,
                                 service_description=str(target_v.product or ""),
                                 evidence_text=ev_summary,
-                                api_key=api_key_input.strip() or None,
+                                api_key=key_to_use,
                                 provider=prov,
                             )
                             st.session_state[f"dossier_{target_v_name}"] = res
@@ -448,11 +591,23 @@ with tab_dossier:
                     m1.metric("Runtime Embedded AI", str(res.get("runtime_ai_present", "N/A")))
                     m2.metric("Marketing Buzz Index", str(res.get("marketing_fluff", "N/A")))
 
-                    st.markdown("#### 🛡️ Identified Threat Vectors & Data Exposure")
-                    for threat in res.get("data_exposure_threats", []):
-                        st.markdown(f"- ⚠️ {threat}")
+                    st.markdown("#### Identified Threat Vectors & Data Exposure")
+                    threat_items = res.get("data_exposure_threats", [])
+                    if not threat_items:
+                        st.info("No threat vectors identified.")
+                    else:
+                        for threat in threat_items:
+                            if isinstance(threat, dict):
+                                t_text = threat.get("threat", "")
+                                t_src = threat.get("source", "")
+                                if t_src:
+                                    st.markdown(f"- **{t_text}**  \n  *Evidence Source:* `{t_src}`")
+                                else:
+                                    st.markdown(f"- **{t_text}**")
+                            else:
+                                st.markdown(f"- {threat}")
 
-                    st.markdown("#### 🏛️ NIST AI RMF 1.0 Governance Mapping")
+                    st.markdown("#### NIST AI RMF 1.0 Governance Mapping")
                     nist = res.get("nist_ai_rmf", {})
                     n_col1, n_col2 = st.columns(2)
                     with n_col1:
@@ -462,11 +617,47 @@ with tab_dossier:
                         st.markdown(f"**Measure:** {nist.get('Measure', 'N/A')}")
                         st.markdown(f"**Manage:** {nist.get('Manage', 'N/A')}")
 
-                    st.markdown("#### 📋 Tailored AI TPRM Vendor Questionnaire")
-                    st.caption("Custom technical questions generated for Meridian to issue to this vendor's CISO:")
+                    st.markdown("#### Tailored Vendor Assessment Questionnaire")
+                    st.caption("Technical due-diligence questions formulated for Meridian to issue to this vendor's CISO:")
                     q_text = "\n".join(f"{i+1}. {q}" for i, q in enumerate(res.get("tailored_questionnaire", [])))
                     st.text_area("Copy Questionnaire", value=q_text, height=140)
 
                     st.markdown(f"**Contractual Recommendation:** *{res.get('contractual_recommendation', '')}*")
             else:
                 st.info("Select a vendor to view or generate an audit dossier.")
+
+with tab_gov:
+    st.subheader("Enterprise AI Governance & Legal Frameworks")
+    st.caption("Optiv Consulting Model Contract Addendum and Banking Regulatory Crosswalk for Meridian Financial.")
+
+    if governance is not None:
+        st.markdown("### Optiv Model AI Contract Addendum (4 Core MSA Clauses)")
+        clauses = governance.get_model_contract_clauses()
+        for c in clauses:
+            with st.expander(f"{c['id']}: {c['title']}", expanded=("CLAUSE-01" in c['id'])):
+                st.markdown(f"**Objective:** {c['objective']}")
+                st.code(c['legal_text'], language="text")
+                st.markdown(f"**Enforcement Remedy:** *{c['key_remedy']}*")
+
+        st.markdown("---")
+        st.markdown("### Financial Services Regulatory Crosswalk")
+        regs = governance.get_regulatory_crosswalk()
+        reg_cols = st.columns(len(regs))
+        for idx, (reg_name, reg_data) in enumerate(regs.items()):
+            with reg_cols[idx]:
+                st.markdown(f"#### {reg_name}")
+                st.caption(f"**Authority:** {reg_data['issuing_bodies']}")
+                for m in reg_data['mandates']:
+                    st.markdown(f"- {m}")
+                st.info(f"**Optiv Alignment:** {reg_data['optiv_alignment']}")
+
+        st.markdown("---")
+        addendum_md = governance.format_clauses_as_markdown()
+        st.download_button(
+            label="Download Optiv AI Governance Addendum (Markdown)",
+            data=addendum_md,
+            file_name="Optiv_Model_AI_Contract_Addendum.md",
+            mime="text/markdown",
+        )
+    else:
+        st.warning("Governance module is unavailable.")

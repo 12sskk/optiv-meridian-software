@@ -2,6 +2,8 @@
 for Case Study 1: Vendor AI Usage Analysis.
 """
 
+from pathlib import Path
+
 from pptx import Presentation
 from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
@@ -508,6 +510,7 @@ def create_deck(output_path="exports/Meridian_AI_Assessment_Case_Study_1.pptx"):
         p.font.color.rgb = GREY_TEXT
         p.space_before = Pt(8)
 
+    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
     prs.save(output_path)
     print(f"Successfully generated presentation deck at: {output_path}")
 

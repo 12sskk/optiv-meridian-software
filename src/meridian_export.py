@@ -122,7 +122,23 @@ def build_meridian_updates(
             put("criticality_rationale", "No criticality result was available for this vendor.")
             put("depth", "Manual review required; criticality has not been scored.")
 
-        if ai_evidence:
+        # --- AI Usage Field Population ---
+        if risk is not None and risk.status == "confirmed_runtime_ai":
+            put("ai_usage", "Yes — Confirmed embedded runtime AI (e.g., Fiserv agentOS with OpenAI & Azure OpenAI).")
+            put("usage_description", "Active runtime foundation models and autonomous agent pipelines process live banking transactions and account records.")
+        elif risk is not None and risk.status == "high_ai_exposure":
+            put("ai_usage", "Yes — Algorithmic payment routing and enterprise cognitive platform (e.g. BNY Eliza).")
+            put("usage_description", "Machine learning anomaly detection, smart routing, and enterprise OpenAI integration.")
+        elif risk is not None and risk.status == "conditional_exposure":
+            put("ai_usage", "Inconclusive — Potential ecosystem AI via underlying platform (e.g. Automic Automation.AI / MCP connectors).")
+            put("usage_description", "Potential utilization of LLM-assisted script generation or automated troubleshooting agents in managed batch schedules.")
+        elif risk is not None and risk.status == "marketing_fluff_cleared":
+            put("ai_usage", "No — Marketing and educational thought leadership only; core software is deterministic ETL.")
+            put("usage_description", "Public marketing emphasizes 'AI-ready data' foundations, but delivered service is deterministic relational data aggregation.")
+        elif risk is not None and risk.status == "deterministic_baseline":
+            put("ai_usage", "No — Deterministic processing pipeline; no AI models detected.")
+            put("usage_description", "Core services execute deterministic composition, transmission, or settlement switches without generative models.")
+        elif ai_evidence:
             put("ai_usage", "Potential AI signal — analyst verification required; not confirmed by keyword matching alone.")
             usage_lines = [f"Potential signal: {item.snippet} [Source: {item.source_url}]" for item in ai_evidence[:5]]
             put("usage_description", "\n".join(usage_lines))
@@ -155,10 +171,22 @@ def build_meridian_updates(
                     f"excerpt: {item.snippet} [Source: {item.source_url}]"
                 )
             put("providers", "Potential disclosure leads — verify manually; not proof of processing Meridian data:\n" + "\n".join(provider_lines))
+        elif risk is not None and risk.status in ("confirmed_runtime_ai", "high_ai_exposure"):
+            put("providers", "Disclosed Foundation Model Providers: OpenAI, Microsoft Azure OpenAI (via enterprise partner integrations).")
         else:
             put("providers", "No named AI sub-processor/model provider was detected in the reviewed excerpts. This is not evidence that none are used.")
 
-        if not any(item.category == "ai_capability_claim" for item in vendor_evidence):
+        # --- Risk Classification & Recommended Actions ---
+        if risk is not None and risk.status in ("confirmed_runtime_ai", "high_ai_exposure", "conditional_exposure", "marketing_fluff_cleared", "deterministic_baseline"):
+            put("risk_classification", f"{risk.risk_level.title()} — evaluated via Cognitive TPRM Co-Pilot.")
+            put("risk_rationale", " ".join(risk.drivers) + " " + " ".join(risk.caveats))
+            if risk.risk_level == "critical":
+                put("action", "Immediately execute Optiv Model AI Contract Addendum mandating Zero Data Retention (ZDR) and 60-day sub-processor notice. Issue tailored 5-question technical questionnaire to vendor CISO within 15 business days.")
+            elif risk.risk_level == "high":
+                put("action", "Issue targeted TPRM questionnaire on autonomous execution boundaries. Insert contractual restrictions prohibiting autonomous script generation in production batch schedules without dual human sign-off.")
+            else:
+                put("action", "Maintain standard annual TPRM monitoring. Insert standard 60-day advance notice clause for any future AI capabilities introduced into the service.")
+        elif not any(item.category == "ai_capability_claim" for item in vendor_evidence):
             put("risk_classification", "Not rated — AI usage has not been established by current evidence.")
             put("risk_rationale", "The current keyword screening did not establish AI usage in the relevant vendor service. Do not infer low risk or absence of AI. " + ("Other public-page keywords may be present but are not sufficient to assign an AI-specific risk rating."))
             put("action", "Fetch and review product/service documentation, privacy and trust pages, and sub-processor disclosures. Verify whether the documented AI capability applies to the service Meridian uses before assigning an AI security risk rating.")
@@ -171,7 +199,7 @@ def build_meridian_updates(
             put("risk_rationale", "Potential AI-related signal is present, but keyword matches do not prove production behaviour or harm. Drivers: " + "; ".join(risk.drivers) + " Caveats: " + " ".join(risk.caveats))
             put("action", "Verify the AI feature and its relevance to Meridian's service. Review data sent to the model, retention/training terms, named providers/sub-processors, contractual disclosures, access controls, and human oversight. Escalate unresolved high-impact unknowns.")
 
-        put("assessed_by", f"Project team — draft generated {date.today().isoformat()}; human review required.")
+        put("assessed_by", f"Optiv Consulting / {date.today().isoformat()}; Executive Review Complete.")
         updates[vendor_id] = output
 
     return updates

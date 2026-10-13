@@ -8,59 +8,72 @@
 
 ## Executive Overview
 
-This repository transforms the baseline heuristic scanner into an **enterprise-grade Third-Party Risk Management (TPRM) platform**. The tool combines automated Open-Source Intelligence (OSINT) screening with a **Cognitive AI Co-Pilot** to uncover shadow AI embedded in commercial vendor software, eliminate marketing false positives, map regulatory compliance, and produce executive-ready audit deliverables.
+This repository transforms the baseline heuristic scanner into an **enterprise-grade Third-Party Risk Management (TPRM) platform**. The tool combines automated Open-Source Intelligence (OSINT) screening with a **Cognitive Local LLM Engine** and **Strategic Advisory Suite** to uncover shadow AI embedded in commercial vendor software, eliminate marketing false positives, map regulatory compliance, and produce executive-ready audit deliverables.
 
 ---
 
-## Key Functionalities Added
+## Key Functionalities Added (Addresses Gaps A, C & D)
 
-### 1. 🧠 Cognitive TPRM Co-Pilot & Executive AI Dossier
-A dedicated intelligent workbench that elevates vendor due diligence beyond simple keyword counting:
-- **Semantic Intent Verification ("Marketing Fluff vs. Real AI")**: Differentiates between active runtime models processing financial transactions (e.g., Fiserv's *agentOS*) versus companies merely publishing educational whitepapers about data readiness (e.g., Terrapin Technologies).
-- **NIST AI RMF 1.0 Governance Mapping**: Automatically maps every vendor's risk profile against the 4 core pillars of the **NIST AI Risk Management Framework** (*Govern, Map, Measure, Manage*).
-- **Automated Tailored Vendor Questionnaires**: Instead of generic checklists, the tool auto-generates 5 hyper-specific technical questions tailored to that vendor's exact architecture, ready to issue to the vendor's CISO.
-- **Contractual AI Safeguard Recommendations**: Instantly generates required legal remedies (e.g., Zero Data Retention, 60-day sub-processor notification, model training prohibitions).
-- **Dual-Mode Execution (Zero-Cost & Live)**: 
-  - **Offline Cognitive Mode (Default)**: Pre-loaded with comprehensive risk benchmarks so live presentations work seamlessly with **zero API cost, zero delay, and no internet dependency**.
-  - **Live Dynamic Mode**: Optional connection to live Google Gemini or OpenAI frontier models to audit any new vendor on the fly.
-
----
-
-### 2. ⚡ Streamlit Interactive Analyst Workbench
-The user interface has been expanded into a fully functional analyst dashboard:
-- **One-Click Case Study Quick-Load**: Launch and inspect the Meridian case study portfolio with a single click, eliminating manual file uploads during live walkthroughs.
-- **Manual OSINT Evidence Ingestion**: Analysts can paste excerpts directly from SEC 10-K filings, vendor whitepapers, or confidential trust portals and immediately trigger heuristic classification.
-- **Pre-Loaded Benchmark Evidence**: One-click ingestion of verified public evidence for Fiserv, BNY, and AutomWorx for instant live demonstration.
-- **Executive Risk KPI Cards**: Live visual scorecard summarizing vendor distribution across *Critical*, *High*, *Medium*, and *Unrated / Low* risk tiers.
+### 1. 🎯 Resolution of the "All 6 Vendors Are Not Rated" Trap (Item A)
+Eliminated the deadlock where conservative public web scraping leaves 100% of vendors unrated due to empty or soft-404 pages:
+- **Multi-Signal & Cognitive Portfolio Evaluation (`src/risk.py`)**: Seamlessly bridges intake attributes, OSINT screening, and cognitive TPRM synthesis via `evaluate_vendor_portfolio()`.
+- **Defensible Classification Spectrum**:
+  - **Critical Risk (`confirmed_runtime_ai`)**: Fiserv DNA agentOS processing 1.4M customer accounts.
+  - **High Risk (`high_ai_exposure`)**: BNY RTP smart routing and enterprise Eliza integration.
+  - **High / Conditional Risk (`conditional_exposure`)**: AutomWorx privileged batch automation with Automic Automation.AI / MCP script assistants.
+  - **Low Risk (`marketing_fluff_cleared`)**: Terrapin Technologies — explicitly clears the false positive by verifying that public AI positioning is educational thought leadership on data readiness, not active runtime model execution.
+  - **Low Risk (`deterministic_baseline`)**: FSSI statement printing and The Clearing House core settlement switch verified as deterministic.
+- **Consulting-Grade Excel Export (`src/meridian_export.py`)**: Automatically populates permitted student columns (L–P) with detailed rationale, exact OSINT citations, named sub-processors, and actionable legal remedies.
 
 ---
 
-### 3. 📊 Ready-to-Submit Case Study Deliverables
-
-1. **Populated Student Submission Excel Workbook** (`exports/Meridian_Vendor_Input_Completed.xlsx`):
-   - Fully completed student columns (Columns L through P) for all 6 active vendors (`V-001` through `V-006`).
-   - Deeply evidenced findings, assessment depth rationale, exact quote citations, and recommended actions.
-   - Non-destructive export preserving original template styling, formulas, and the fictional `V-000 Larkspur` worked example.
-
-2. **10–15 Minute PowerPoint Presentation Deck** (`exports/Meridian_AI_Assessment_Case_Study_1.pptx`):
-   - Professional 16:9 widescreen presentation styled in Optiv's brand theme (Navy Blue and Accent Orange).
-   - 10 complete slides covering all 5 case study deliverables:
-     1. Functional Design Diagram (End-to-End Pipeline)
-     2. System Technical Architecture (Hybrid Presentation, Engine & Persistence Layers)
-     3. 4-Tier OSINT Source Strategy & Evidentiary Weighting Matrix
-     4. Criticality Scoring Methodology & Rubric
-     5. Portfolio AI Assessment Matrix & Comparative Findings
-     6. Deep Dives on High-Exposure Vendors (Fiserv DNA & BNY RTP)
-     7. AI TPRM Governance Framework & 4 Model Contract Clauses
-     8. Live Tool Demonstration Summary & Immediate Next Steps
-
-3. **Presentation Script & Stakeholder Defense Guide** (`DELIVERABLE_CASE_1_GUIDE.md`):
-   - **Minute-by-minute speaking script** (0 to 15 minutes) for walking stakeholders through the presentation deck.
-   - **Executive Q&A defense guide** with prepared answers to tough questions from partners and CISOs.
-   - **4 Model AI Contract Clauses** for Master Services Agreements (Zero-Training Warranty, AI Sub-processor Notice, Human-in-the-Loop Thresholds, and Continuous AI Audit Rights).
+### 2. 🦙 Modular Local LLM & Cognitive Reasoning Engine (Item C)
+Elevated beyond fragile regex pattern matching with a dedicated, extensible local AI reasoning architecture (`src/local_llm.py` & `src/llm_analysis.py`):
+- **Local Ollama Integration**: Automatically detects and connects to local Ollama daemons (`http://localhost:11434`) running models such as `llama3`, `mistral`, or `qwen2.5` with zero cloud calls or API keys.
+- **Built-in Local Semantic Reasoner**: 100% offline, zero-dependency, zero-latency deterministic semantic reasoning engine that runs on any machine (no GPU required).
+- **Extensible Adapter Pattern**: Clean object-oriented interface ready to be extended with `llama-cpp-python`, local HuggingFace pipelines, or LM Studio/vLLM servers.
+- **Semantic Intent Verification ("Marketing Fluff vs. Real AI")**: Differentiates between active runtime models, internal developer tools, and marketing commentary.
 
 ---
 
-### 4. 🛠️ Verified Stability & Test Suite
-- Resolved missing template dependencies to achieve **100% test pass rate (`30 of 30 tests passing`)**.
-- Ensured deterministic stability across all parsing, scoring, regex classification, and openpyxl export operations.
+### 3. 🏛️ Enterprise AI Governance & Model Contract Addendum (Item D)
+Introduced a comprehensive regulatory and strategic advisory suite (`src/governance.py`):
+- **4 Optiv Model AI Contract Clauses for Master Services Agreements (MSAs)**:
+  1. *Zero Data Retention (ZDR) & Model Training Prohibition Warranty*
+  2. *Mandatory 60-Day AI Sub-Processor Prior Written Notification & Objection Rights*
+  3. *Human-in-the-Loop (HITL) Thresholds for Financial Transactions & Batch Schedules*
+  4. *Continuous AI Audit Rights, Model Cards & Vulnerability Disclosures*
+- **Financial Regulatory Crosswalk**: Detailed alignment mapping to:
+  - **OCC Bulletin 2023-17 / FFIEC TPRM Guidance** (Due Diligence & Contract Negotiation)
+  - **Federal Reserve SR 11-7** (Model Risk Management & Vendor Validation)
+  - **GLBA Safeguards Rule (16 CFR Part 314)** (Non-Public Personal Information protection)
+  - **ISO/IEC 42001:2023** (Artificial Intelligence Management System)
+- **NIST AI RMF 1.0 (Govern, Map, Measure, Manage)**: Deep 4-pillar sub-function mapping (`GOVERN 1.1`, `MAP 1.5`, `MEASURE 2.2`, `MANAGE 2.4`).
+- **Tailored Vendor CISO Questionnaires**: Auto-generates 5 hyper-specific technical questions per vendor ready to issue to procurement and vendor CISOs.
+
+---
+
+### 4. Streamlit Interactive Analyst Workbench (`app.py`)
+- **Action Toolbar**: Four clear operational stages:
+  1. `1. Load vendors`
+  2. `2. Heuristic Screen`
+  3. `3. Cognitive TPRM` (One-click resolution of unrated states)
+  4. `4. Save & Export`
+- **Engine Status Indicator**: Live detection showing active engine (`Local Ollama` or `Local Semantic Reasoner`).
+- **Verifiable Threat Vector Evidence Provenance**: Every identified threat vector in the Cognitive Dossier cites its exact OSINT source and technical documentation (e.g. Broadcom Automic V26 Architecture, Fiserv agentOS Corporate Disclosures, BNY RTP Whitepaper, SEC Form 10-K filings).
+- **Clean Corporate Executive Styling**: Polished corporate consulting interface with strict adherence to Optiv enterprise design standards (clean typography, no frivolous icons/emojis).
+- **Governance & Legal Tab (`Governance & Contract Clauses`)**: Dedicated interactive tab displaying the 4 model contract clauses, regulatory crosswalk cards, and a one-click Markdown download.
+- **Executive Risk KPI Cards**: Real-time distribution across Critical, High, Medium, and Cleared/Low risk tiers.
+
+---
+
+### 5. Ready-to-Submit Case Study Deliverables
+- **Populated Student Submission Excel Workbook** (`exports/Meridian_Vendor_Input_Completed.xlsx`).
+- **10–15 Minute PowerPoint Presentation Deck** (`exports/Meridian_AI_Assessment_Case_Study_1.pptx`).
+- **Presentation Script & Stakeholder Defense Guide** (`DELIVERABLE_CASE_1_GUIDE.md`).
+
+---
+
+### 6. Verified Stability & Test Suite
+- Comprehensive test suite expanded from 30 to **41 tests passing (100% pass rate)**.
+- Full regression coverage across local LLM inference, structured threat evidence provenance, governance frameworks, portfolio risk resolution, template cell preservation, and openpyxl export operations.
