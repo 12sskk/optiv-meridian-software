@@ -57,6 +57,8 @@ class BaseLocalLLMProvider(ABC):
 class OllamaLocalProvider(BaseLocalLLMProvider):
     """Connects to a local Ollama daemon (default http://localhost:11434)."""
 
+    _cached_status: tuple[bool, float, str | None] | None = None
+
     def __init__(
         self,
         base_url: str = "http://localhost:11434",
@@ -70,8 +72,16 @@ class OllamaLocalProvider(BaseLocalLLMProvider):
 
     def is_available(self) -> bool:
         """Check if local Ollama daemon is reachable and has at least one model."""
+        import time
+        now = time.time()
+        if OllamaLocalProvider._cached_status is not None:
+            avail, cached_at, model = OllamaLocalProvider._cached_status
+            if now - cached_at < 10.0:
+                self._active_model = model
+                return avail
+
         try:
-            resp = requests.get(f"{self.base_url}/api/tags", timeout=2)
+            resp = requests.get(f"{self.base_url}/api/tags", timeout=1.5)
             if resp.status_code == 200:
                 models = resp.json().get("models", [])
                 if models:
@@ -80,9 +90,12 @@ class OllamaLocalProvider(BaseLocalLLMProvider):
                         self._active_model = self.preferred_model
                     else:
                         self._active_model = model_names[0]
+                    OllamaLocalProvider._cached_status = (True, now, self._active_model)
                     return True
         except Exception:
             pass
+
+        OllamaLocalProvider._cached_status = (False, now, None)
         return False
 
     @property

@@ -242,9 +242,9 @@ def analyze_with_llm(
     from src import local_llm
 
     # If provider is explicitly local or ollama, or if auto with no API key:
-    if provider in ("local", "ollama") or (provider == "auto" and not api_key):
+    if provider in ("local", "reasoner", "ollama") or (provider == "auto" and not api_key):
         logger.info("Executing TPRM analysis using Local LLM engine for '%s'", vendor_name)
-        mode = "ollama" if provider == "ollama" else "auto"
+        mode = "ollama" if provider == "ollama" else ("reasoner" if provider in ("local", "reasoner") else "auto")
         return local_llm.analyze_vendor_locally(
             vendor_name=vendor_name,
             service_description=service_description,

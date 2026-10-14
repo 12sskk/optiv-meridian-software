@@ -72,6 +72,14 @@ def _rows(items: list[Any]) -> list[dict[str, Any]]:
     return [asdict(item) for item in items]
 
 
+def _display_df(data: Any) -> None:
+    """Render dataframe across modern and legacy Streamlit versions without deprecation warnings."""
+    try:
+        st.dataframe(data, width="stretch")
+    except TypeError:
+        st.dataframe(data, use_container_width=True)
+
+
 def _error(message: str) -> None:
     st.session_state.last_error = message
     logger.error(message)
@@ -172,10 +180,29 @@ with st.sidebar:
         st.warning("Last system notification is displayed in the main panel.")
 
 # Map engine choice to provider and local mode
-local_mode = "ollama" if "Ollama" in engine_choice else ("reasoner" if "Built-in" in engine_choice else "auto")
-dossier_provider = "ollama" if "Ollama" in engine_choice else ("gemini" if "Gemini" in engine_choice else ("openai" if "OpenAI" in engine_choice else ("local" if "Built-in" in engine_choice else "auto")))
+if engine_choice == "Built-in Reasoner (100% Offline)":
+    local_mode = "reasoner"
+    dossier_provider = "local"
+elif engine_choice == "Ollama (Local Port 11434)":
+    local_mode = "ollama"
+    dossier_provider = "ollama"
+elif "Gemini" in engine_choice:
+    local_mode = "auto"
+    dossier_provider = "gemini"
+elif "OpenAI" in engine_choice:
+    local_mode = "auto"
+    dossier_provider = "openai"
+else:
+    local_mode = "auto"
+    dossier_provider = "auto"
 
 case_file = ROOT / "supporting material" / "Meridian_Vendor_Input.xlsx"
+if not case_file.exists():
+    try:
+        from create_input_workbook import generate_input_workbook
+        generate_input_workbook(case_file)
+    except Exception as exc:
+        logger.warning("Could not auto-generate case study workbook: %s", exc)
 
 col_up1, col_up2 = st.columns([3, 1])
 with col_up1:
@@ -391,13 +418,13 @@ with tab_vendors:
                 "Meridian template mode: the fictional worked example is excluded from scoring. "
                 f"Student-completion columns detected: {len(st.session_state.student_columns)}."
             )
-        st.dataframe(_rows(st.session_state.vendors), use_container_width=True)
+        _display_df(_rows(st.session_state.vendors))
     else:
         st.info("Upload an intake workbook with a vendor name column to begin.")
 
 with tab_crit:
     if st.session_state.criticality:
-        st.dataframe(_rows(st.session_state.criticality), use_container_width=True)
+        _display_df(_rows(st.session_state.criticality))
     else:
         st.info("Run analysis to compute intake-based criticality scores.")
 
@@ -406,7 +433,7 @@ with tab_src:
         "Source rows are **candidates and search queries**, not confirmed OSINT findings."
     )
     if st.session_state.sources:
-        st.dataframe(_rows(st.session_state.sources), use_container_width=True)
+        _display_df(_rows(st.session_state.sources))
     else:
         st.info("No source candidates yet.")
 
@@ -495,7 +522,7 @@ with tab_ev:
                     st.rerun()
 
     if st.session_state.evidence:
-        st.dataframe(_rows(st.session_state.evidence), use_container_width=True)
+        _display_df(_rows(st.session_state.evidence))
     else:
         st.info("No evidence snippets available. Enable fetching or click 'Pre-load Verified Evidence Benchmark' above.")
 
@@ -510,7 +537,7 @@ with tab_risk:
         cols_m[1].metric("High AI Risk", high_count)
         cols_m[2].metric("Medium AI Risk", med_count)
         cols_m[3].metric("Unrated / Low", unrated_count)
-        st.dataframe(_rows(st.session_state.risks), use_container_width=True)
+        _display_df(_rows(st.session_state.risks))
     else:
         st.info("Risk stays unrated until classified evidence exists.")
 

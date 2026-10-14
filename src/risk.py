@@ -170,19 +170,19 @@ def evaluate_vendor_portfolio(
 
     crit_by_name = {c.vendor_name: c for c in criticality}
     results = []
+    engine = local_llm.get_local_llm_engine(mode=mode) if enable_cognitive else None
 
     for vendor in vendors:
         v_evidence = evidence_by_vendor.get(vendor.name, [])
         v_crit = crit_by_name.get(vendor.name)
 
         cognitive_dossier = None
-        if enable_cognitive:
+        if enable_cognitive and engine is not None:
             ev_summary = "\n".join(e.snippet for e in v_evidence[:5]) if v_evidence else ""
-            cognitive_dossier = local_llm.analyze_vendor_locally(
+            cognitive_dossier = engine.analyze(
                 vendor_name=vendor.name,
                 service_description=getattr(vendor, "product", "") or "",
                 evidence_text=ev_summary,
-                mode=mode,
             )
 
         res = analyse_risk(
